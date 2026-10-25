@@ -28,6 +28,17 @@ try { File.WriteAllText(learnedFile,"nihaoxiexie\t你好谢谢\nnihaoxiexie\t你
 var longestEngine=new CandidateEngine(new Dictionary<Language,Lexeme[]>{[Language.Chinese]=Lexicon.Normalize([new("ge","个",1000000),new("gengxin","更新",1),new("geng","更",1000000)])});
 Check(longestEngine.Query("gengxin",new(){Japanese=false,English=false})[0].Text=="更新","完整最长匹配优先于高频短字");
 var preferences = new Preferences();
+var nasalWords=Lexicon.Normalize([new("ふんいき","雰囲気",944736),new("こんにちは","こんにちは",1000000),new("おんな","女",950000),new("あんない","案内",950000),new("きんにく","筋肉",950000)]);
+var nasalEngine=new CandidateEngine(new Dictionary<Language,Lexeme[]>{[Language.Japanese]=nasalWords});
+foreach(string spelling in new[]{"funniki","fun'iki","funn'iki"})
+{
+    Check(nasalEngine.Query(spelling,new(){Chinese=false,English=false})[0].Text=="雰囲気","连续n及显式分隔词库匹配 "+spelling);
+    Check(Romaji.PreferredHiragana(spelling,nasalWords)=="ふんいき","连续n的回车假名按词库消歧 "+spelling);
+}
+foreach(var (spelling,kana) in new[]{("konnichiha","こんにちは"),("konnnichiha","こんにちは"),("onna","おんな"),("annai","あんない"),("kinniku","きんにく"),("funiki","ふにき")})
+    Check(Romaji.PreferredHiragana(spelling,nasalWords)==kana,"保留原有n拼写 "+spelling);
+Check(nasalEngine.Query("konnichihafunniki",new(){Chinese=false,English=false}).Any(c=>c.Text=="こんにちは雰囲気"),"同一句中两处nn可分别匹配不同读音");
+Check(Romaji.HiraganaReadings(string.Concat(Enumerable.Repeat("nni",40))).Length<=8,"歧义读音数量有界");
 var completionEngine=new CandidateEngine(new Dictionary<Language,Lexeme[]>{[Language.Chinese]=Lexicon.Normalize([new("hao","好",1000000),new("haoxiang","好像",900000),new("haoxiang","好想",800000)])});
 var completedRows=completionEngine.Query("haox",new(){Japanese=false,English=false});
 Check(completedRows[0].Text=="好像"&&completedRows[0].Key=="haox","未输完整拼音优先整词补全并消耗已输入字母");

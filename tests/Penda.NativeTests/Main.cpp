@@ -87,6 +87,12 @@ int wmain(int argc,wchar_t** argv) {
             wchar_t system[32768]{};GetSystemDirectoryW(system,32768);BOOL created=CreateProcessW(exe,command.data(),nullptr,nullptr,FALSE,EXTENDED_STARTUPINFO_PRESENT|CREATE_NO_WINDOW,nullptr,system,&startup.StartupInfo,&process);auto error=GetLastError();DeleteProcThreadAttributeList(attributes);FreeSid(sid);if(!created){std::cerr<<"Restricted child creation error="<<error<<"\n";throw std::runtime_error("App-container launch failed");}
             auto waited=WaitForSingleObject(process.hProcess,15000);DWORD result=0;GetExitCodeProcess(process.hProcess,&result);if(waited==WAIT_TIMEOUT)TerminateProcess(process.hProcess,107);CloseHandle(process.hThread);CloseHandle(process.hProcess);if(waited!=WAIT_OBJECT_0||result!=0){std::cerr<<"Restricted dictionary child exit="<<result<<"\n";throw std::runtime_error("App-container dictionary verification failed");}std::cout<<"App-container full dictionary read and canonical path resolution passed.\n";return 0;
         }
+        if(argc==3 && std::wstring_view(argv[1])==L"--nasal-snapshot") {
+            penda::Engine current;Check(current.Load(argv[2]),"load full dictionary for nn disambiguation");
+            for(const auto& spelling:{L"funniki",L"fun'iki",L"funn'iki"}){auto rows=current.Query(spelling,2);Check(!rows.empty()&&rows.front().text==L"雰囲気","ambiguous nn resolves to first-page kanji");Check(current.PreferredHiragana(spelling)==L"ふんいき","ambiguous nn resolves Enter kana");}
+            for(const auto& pair:{std::pair{L"konnichiha",L"こんにちは"},std::pair{L"onna",L"おんな"},std::pair{L"annai",L"あんない"},std::pair{L"kinniku",L"きんにく"}})Check(current.PreferredHiragana(pair.first)==pair.second,"established nn spellings remain unchanged");
+            std::cout<<"Full dictionary nn ambiguity, explicit separators and normal spellings passed.\n";return 0;
+        }
         if(argc==3 && std::wstring_view(argv[1])==L"--romaji-snapshot") {
             penda::Engine current;Check(current.Load(argv[2]),"load installed pre-extension dictionary");
             for(const auto& pair:{std::pair{L"fa",L"ファ"},std::pair{L"ofa-",L"オファー"},std::pair{L"firumu",L"フィルム"},std::pair{L"shefu",L"シェフ"},std::pair{L"dhizuni-",L"ディズニー"}}){
@@ -160,9 +166,9 @@ int wmain(int argc,wchar_t** argv) {
             auto text = [&]() { auto count = u32(); std::wstring value(count,L'\0'); stream.read(reinterpret_cast<char*>(value.data()),count*2); Check(bool(stream),"golden string"); return value; };
             unsigned count = u32(); parityInputs += count;
             for (unsigned i = 0; i < count; ++i) {
-                auto input = text(), hiragana = text(), width = text();
+                auto input = text(), hiragana = text(), width = text(), preferred = text();
                 if (engine.Hiragana(input) != hiragana) std::cerr << "Romaji mismatch: case " << index << " input " << i << '\n';
-                Check(engine.Hiragana(input) == hiragana,"native romaji parity"); Check(engine.Width(input) == width,"native width parity");
+                Check(engine.Hiragana(input) == hiragana,"native romaji parity"); Check(engine.Width(input) == width,"native width parity");Check(engine.PreferredHiragana(input)==preferred,"native dictionary-aware kana parity");
                 auto rows = engine.Query(input); auto expected = u32(); Check(rows.size() == expected,"native candidate count parity");
                 for (unsigned j = 0; j < expected; ++j) { auto value = text(); auto language = u32(); Check(rows[j].text == value && rows[j].language == static_cast<int>(language),"native candidate order parity"); }
             }
@@ -278,6 +284,10 @@ int wmain(int argc,wchar_t** argv) {
                 Hr(button->OnMenuSelect(11),"persist Japanese priority"); type(L"nihongo"); key(L'1'); Check(store->text.ends_with(L"日本語"),"Japanese priority selects Japanese without Tab");
                 type(L"nihongo");key(VK_RETURN);Check(store->text.ends_with(L"にほんご"),"Japanese priority Enter commits hiragana instead of raw romaji or first kanji");
                 type(L"gakkou");key(VK_RETURN);Check(store->text.ends_with(L"がっこう"),"Japanese priority Enter converts voiced and doubled consonants");
+                type(L"funniki");key(L'1');Check(store->text.ends_with(L"雰囲気"),"ambiguous nn spelling selects correct dictionary kanji");
+                type(L"funniki");key(VK_RETURN);Check(store->text.ends_with(L"ふんいき"),"ambiguous nn Enter uses dictionary-supported kana");
+                type(L"fun'iki");key(L'1');Check(store->text.ends_with(L"雰囲気"),"explicit apostrophe spelling remains supported");
+                type(L"konnichiha");key(VK_RETURN);Check(store->text.ends_with(L"こんにちは"),"normal nni spelling is not broken by ambiguous nn matching");
                 type(L"fa");key(VK_RETURN);Check(store->text.ends_with(L"ふぁ"),"native TSF fa commits small-vowel hiragana");
                 type(L"ofa-");key(L'1');Check(store->text.ends_with(L"オファー"),"native TSF ofa dash selects loanword from unchanged user dictionary");
                 type(L"pa-thi-");key(VK_RETURN);Check(store->text.ends_with(L"ぱーてぃー"),"native TSF extended thi and long vowels compose correctly");

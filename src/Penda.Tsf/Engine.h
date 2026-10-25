@@ -14,6 +14,8 @@ struct Engine {
     std::map<std::wstring, std::wstring> romaji;
     bool Load(const std::wstring& path) noexcept;
     std::wstring Hiragana(std::wstring input) const;
+    std::vector<std::wstring> HiraganaReadings(const std::wstring& input) const;
+    std::wstring PreferredHiragana(const std::wstring& input) const;
     std::wstring Width(const std::wstring& input) const;
     std::vector<Candidate> Query(const std::wstring& input, unsigned mask = 0xFFFFFFFF) const;
 };

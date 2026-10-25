@@ -73,6 +73,7 @@ std::wstring Engine::Hiragana(std::wstring input) const {
     input = Lower(input); std::wstring output;
     for (size_t i = 0; i < input.size();) {
         wchar_t c = input[i];
+        if(c==L'n' && i+2<input.size() && input[i+1]==L'n' && input[i+2]==L'\'') {output+=L'ん';i+=3;continue;}
         if (c == L'm' && i+1 < input.size() && (input[i+1] == L'b' || input[i+1] == L'p')) { output += L'ん'; ++i; continue; }
         if(c==L't' && i+2<input.size() && input[i+1]==L'c' && input[i+2]==L'h') {output+=L'っ';++i;continue;}
         if (i + 1 < input.size() && c == input[i + 1] && c != L'n' && std::wstring_view(L"bcdfghjklmpqrstvwxyz").find(c) != std::wstring_view::npos) { output += L'っ'; ++i; continue; }
@@ -84,6 +85,26 @@ std::wstring Engine::Hiragana(std::wstring input) const {
     }
     return output;
 }
+std::vector<std::wstring> Engine::HiraganaReadings(const std::wstring& input) const {
+    auto key=Lower(input);std::vector<std::wstring> spellings{key};
+    for(size_t i=0;i+2<key.size();++i){
+        if(key[i]!=L'n'||key[i+1]!=L'n'||std::wstring_view(L"aiueoy").find(key[i+2])==std::wstring_view::npos||(i&&key[i-1]==L'n'))continue;
+        size_t count=spellings.size();for(size_t j=0;j<count&&spellings.size()<8;++j)spellings.push_back(spellings[j].substr(0,i)+L"n'"+spellings[j].substr(i+2));
+    }
+    std::vector<std::wstring> readings;for(const auto& spelling:spellings){auto value=Hiragana(spelling);if(std::find(readings.begin(),readings.end(),value)==readings.end())readings.push_back(std::move(value));}return readings;
+}
+static std::wstring PreferredReading(const std::vector<Word>& words,const std::vector<std::wstring>& readings) {
+    auto preferred=readings.front();int best=-1;
+    for(size_t i=0;i<readings.size();++i){
+        const auto& key=readings[i];auto first=std::lower_bound(words.begin(),words.end(),key,[](const Word& word,const std::wstring& value){return word.key<value;});
+        if(first==words.end()||first->key!=key)continue;
+        if(i==0)return key;
+        int frequency=0;for(auto it=first;it!=words.end()&&it->key==key;++it)frequency=std::max(frequency,it->frequency);
+        if(frequency>best){best=frequency;preferred=key;}
+    }
+    return preferred;
+}
+std::wstring Engine::PreferredHiragana(const std::wstring& input) const {return PreferredReading(words[1],HiraganaReadings(input));}
 std::wstring Engine::Width(const std::wstring& input) const {
     std::wstring output, expanded;
     if (kana) {
@@ -116,7 +137,7 @@ std::vector<Candidate> Engine::Query(const std::wstring& input, unsigned mask) c
     for (int language = 0; language < 3; ++language) {
         if (!((mask == 0xFFFFFFFF ? languages : mask) & (1u << language))) continue;
         auto& group = groups[language]; const auto& rows = words[language];
-        std::vector<std::wstring> keys{key}; if (language == 1) { auto kanaKey = Hiragana(input); if (kanaKey != key) keys.push_back(kanaKey); }
+        std::vector<std::wstring> readings;std::vector<std::wstring> keys{key}; if (language == 1) {readings=HiraganaReadings(input);for(const auto& reading:readings)if(std::find(keys.begin(),keys.end(),reading)==keys.end())keys.push_back(reading);}
         for (const auto& lookupKey : keys) {
         auto start = std::lower_bound(rows.begin(), rows.end(), lookupKey, [](const Word& word, const std::wstring& value) { return word.key < value; });
         int scanned = 0;
@@ -124,9 +145,9 @@ std::vector<Candidate> Engine::Query(const std::wstring& input, unsigned mask) c
         }
         if (language == 0 && key.size()>=1 && key.size()<=512) { auto decoded=DecodeChinese(rows,key); group.insert(group.end(),decoded.begin(),decoded.end()); }
         if (language == 1) {
-            auto hiragana = Hiragana(input);
+            auto hiragana = PreferredReading(rows,readings);
             const bool exact=std::any_of(group.begin(),group.end(),[](const Candidate& item){return item.score>=2'000'000;});
-            if(!exact){auto decoded=DecodeJapanese(rows,hiragana,key);group.insert(group.end(),decoded.begin(),decoded.end());}
+            if(!exact)for(const auto& reading:readings){auto decoded=DecodeJapanese(rows,reading,key);group.insert(group.end(),decoded.begin(),decoded.end());}
             group.push_back({hiragana, input, language, 1'500'000}); group.push_back({Katakana(hiragana), input, language, 1'400'000});
         }
         if (language == 2) group.push_back({input, input, language, 1'600'000});

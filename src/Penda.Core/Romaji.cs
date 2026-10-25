@@ -48,6 +48,7 @@ public static class Romaji
         for (int i = 0; i < input.Length;)
         {
             var c = input[i];
+            if(c=='n' && i+2<input.Length && input[i+1]=='n' && input[i+2]=='\'') {result.Append('ん');i+=3;continue;}
             if (c == 'm' && i + 1 < input.Length && input[i+1] is 'b' or 'p') { result.Append('ん'); i++; continue; }
             if(c=='t' && i+2<input.Length && input[i+1]=='c' && input[i+2]=='h') { result.Append('っ');i++;continue; }
             if (i + 1 < input.Length && c == input[i + 1] && c != 'n' && "bcdfghjklmpqrstvwxyz".Contains(c)) { result.Append('っ'); i++; continue; }
@@ -60,6 +61,34 @@ public static class Romaji
             if (!found) { result.Append(c); i++; }
         }
         return result.ToString();
+    }
+    public static string[] HiraganaReadings(string input)
+    {
+        input=input.ToLowerInvariant();
+        var spellings=new List<string>{input};
+        for(int i=0;i+2<input.Length;++i)
+        {
+            if(input[i]!='n'||input[i+1]!='n'||!"aiueoy".Contains(input[i+2])||(i>0&&input[i-1]=='n'))continue;
+            int count=spellings.Count;
+            for(int j=0;j<count&&spellings.Count<8;++j)
+                spellings.Add(spellings[j][..i]+"n'"+spellings[j][(i+2)..]);
+        }
+        return spellings.Select(Hiragana).Distinct(StringComparer.Ordinal).ToArray();
+    }
+    public static string PreferredHiragana(string input,IReadOnlyList<Lexeme> words) => PreferredReading(HiraganaReadings(input),words);
+    public static string PreferredReading(IReadOnlyList<string> readings,IReadOnlyList<Lexeme> words)
+    {
+        string preferred=readings[0];int best=-1;
+        for(int i=0;i<readings.Count;++i)
+        {
+            string key=JapaneseDictionaryReader.Reading(readings[i]);int low=0,high=words.Count;
+            while(low<high){int mid=(low+high)/2;if(string.CompareOrdinal(words[mid].Key,key)<0)low=mid+1;else high=mid;}
+            if(low==words.Count||words[low].Key!=key)continue;
+            if(i==0)return readings[0]; // Keep established nna/nni/nya spellings when valid.
+            int frequency=0;for(int j=low;j<words.Count&&words[j].Key==key;++j)frequency=Math.Max(frequency,words[j].Frequency);
+            if(frequency>best){best=frequency;preferred=readings[i];}
+        }
+        return preferred;
     }
     public static string Katakana(string text) => new(text.Select(c => c is >= '\u3041' and <= '\u3096' ? (char)(c + 0x60) : c).ToArray());
 }

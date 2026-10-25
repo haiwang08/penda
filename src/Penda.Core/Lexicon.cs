@@ -76,13 +76,14 @@ public sealed class CandidateEngine
         {
             if (!preferences.Enabled(language)) continue;
             var matches = new List<Candidate>();
+            var readings=language==Language.Japanese?Romaji.HiraganaReadings(input):Array.Empty<string>();
             var usage=userWeights?UserLexicon.ReadLanguage(language):Array.Empty<Lexeme>();
             var counts=usage.ToDictionary(w=>(w.Key,w.Text),w=>w.Frequency);
             if(language==Language.Chinese)matches.AddRange(usage.Where(w=>key.StartsWith(w.Key,StringComparison.Ordinal)&&w.Text.Length<=8).Select(w=>new Candidate(w.Text,language,w.Key,1_700_000)));
             if(language==Language.Japanese)matches.AddRange(usage.Where(w=>w.Key==key).Select(w=>new Candidate(w.Text,language,w.Key,3_200_000)));
             if (dictionaries.TryGetValue(language, out var rows))
             {
-                foreach (var lookupKey in (language == Language.Japanese ? new[] { key, JapaneseDictionaryReader.Reading(Romaji.Hiragana(input)) }.Distinct(StringComparer.Ordinal) : new[] { key }))
+                foreach (var lookupKey in (language == Language.Japanese ? new[] { key }.Concat(readings.Select(JapaneseDictionaryReader.Reading)).Distinct(StringComparer.Ordinal) : new[] { key }))
                 {
                 int low = 0, high = rows.Length;
                 while (low < high) { int mid = (low + high) / 2; if (string.CompareOrdinal(rows[mid].Key, lookupKey) < 0) low = mid + 1; else high = mid; }
@@ -96,8 +97,8 @@ public sealed class CandidateEngine
             }
             if (language == Language.Japanese)
             {
-                var kana = Romaji.Hiragana(input);
-                if(dictionaries.TryGetValue(language,out var japaneseRows) && !matches.Any(c=>c.Score>=2_000_000)) matches.AddRange(JapaneseDecoder.Decode(japaneseRows,kana,key));
+                string kana=readings[0];
+                if(dictionaries.TryGetValue(language,out var japaneseRows)){kana=Romaji.PreferredReading(readings,japaneseRows);if(!matches.Any(c=>c.Score>=2_000_000))foreach(var reading in readings)matches.AddRange(JapaneseDecoder.Decode(japaneseRows,reading,key));}
                 matches.Add(new(kana, language, input, 1_500_000));
                 matches.Add(new(Romaji.Katakana(kana), language, input, 1_400_000));
             }

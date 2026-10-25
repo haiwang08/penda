@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$staging = Join-Path $projectRoot 'artifacts\updates\settings-0.9.8'
+$staging = Join-Path $projectRoot 'artifacts\updates\settings-0.9.9'
 $installed = Join-Path $projectRoot 'artifacts\tsf-package\settings'
 $romajiLicensePath = Join-Path $projectRoot 'artifacts\tsf-package\licenses\romaji'
 New-Item -ItemType Directory -Force -Path $romajiLicensePath | Out-Null
