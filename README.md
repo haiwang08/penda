@@ -1,5 +1,7 @@
 # Penda TSF · Windows 中日英三语输入法
 
+Let's typing！
+
 0.2 已改为原生 C++ TSF 输入法。Windows 加载 x64 / x86 的 `Penda.Tsf.dll`，通过 TSF 编辑会话处理组合文字与提交，不再使用全局键盘钩子或模拟按键。独立的 .NET 设置程序只负责词库、宽度和预览，关闭设置程序也可以输入。
 
 项目目录：`E:\projects\penda`。发布目录：`artifacts\tsf-package`。旧版 `artifacts\portable` 是 0.1 桌面原型，不属于当前 TSF 发布包，请不要同时运行。
