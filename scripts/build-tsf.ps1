@@ -1,6 +1,8 @@
 ﻿param([ValidateSet('x64','Win32','Both')][string]$Architecture = 'Both')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
+& dotnet run --project (Join-Path $projectRoot 'tools\Penda.Build\Penda.Build.csproj') -c Release -- romaji-header (Join-Path $projectRoot 'src\Penda.Tsf\RomajiTable.generated.h')
+if ($LASTEXITCODE -ne 0) { throw 'Japanese romaji header generation failed.' }
 $locator = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 if (!(Test-Path -LiteralPath $locator)) { throw '请安装 Visual Studio 2022 的“使用 C++ 的桌面开发”工作负载。' }
 $msbuildPath = & $locator -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1

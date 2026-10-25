@@ -5,4 +5,4 @@ if (!(Test-Path -LiteralPath $Compiler)) { throw '未找到 Inno Setup 6。安�
 & (Join-Path $PSScriptRoot 'publish.ps1') -SelfContained
 & $Compiler (Join-Path $projectRoot 'installer\Penda.iss')
 if ($LASTEXITCODE -ne 0) { throw '安装包编译失败。' }
-Write-Host "安装包：$(Join-Path $projectRoot 'artifacts\installer\Penda-TSF-Setup-0.9.7.exe')"
+Write-Host "安装包：$(Join-Path $projectRoot 'artifacts\installer\Penda-TSF-Setup-0.9.8.exe')"

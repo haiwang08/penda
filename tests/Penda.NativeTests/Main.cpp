@@ -87,6 +87,13 @@ int wmain(int argc,wchar_t** argv) {
             wchar_t system[32768]{};GetSystemDirectoryW(system,32768);BOOL created=CreateProcessW(exe,command.data(),nullptr,nullptr,FALSE,EXTENDED_STARTUPINFO_PRESENT|CREATE_NO_WINDOW,nullptr,system,&startup.StartupInfo,&process);auto error=GetLastError();DeleteProcThreadAttributeList(attributes);FreeSid(sid);if(!created){std::cerr<<"Restricted child creation error="<<error<<"\n";throw std::runtime_error("App-container launch failed");}
             auto waited=WaitForSingleObject(process.hProcess,15000);DWORD result=0;GetExitCodeProcess(process.hProcess,&result);if(waited==WAIT_TIMEOUT)TerminateProcess(process.hProcess,107);CloseHandle(process.hThread);CloseHandle(process.hProcess);if(waited!=WAIT_OBJECT_0||result!=0){std::cerr<<"Restricted dictionary child exit="<<result<<"\n";throw std::runtime_error("App-container dictionary verification failed");}std::cout<<"App-container full dictionary read and canonical path resolution passed.\n";return 0;
         }
+        if(argc==3 && std::wstring_view(argv[1])==L"--romaji-snapshot") {
+            penda::Engine current;Check(current.Load(argv[2]),"load installed pre-extension dictionary");
+            for(const auto& pair:{std::pair{L"fa",L"ファ"},std::pair{L"ofa-",L"オファー"},std::pair{L"firumu",L"フィルム"},std::pair{L"shefu",L"シェフ"},std::pair{L"dhizuni-",L"ディズニー"}}){
+                auto rows=current.Query(pair.first,2);Check(std::any_of(rows.begin(),rows.end(),[&](const auto& item){return item.text==pair.second&&item.key==current.Hiragana(pair.first);}),"extended romaji reaches real dictionary entry, not only script fallback");
+            }
+            std::cout<<"Existing full dictionary: extended romaji and katakana dictionary lookups passed.\n";return 0;
+        }
         if(argc==3 && std::wstring_view(argv[1])==L"--abbreviation-snapshot") {
             penda::Engine current;Check(current.Load(argv[2]),"load real abbreviation dictionary");auto rows=current.Query(L"haox",1);size_t rank=rows.size();for(size_t i=0;i<rows.size();++i)if(rows[i].text==L"好像"){rank=i;break;}
             std::cout<<"haox -> haoxiang candidate rank="<<rank<<" / "<<rows.size()<<"\n";Check(rank<10,"haox offers full-word completion on first page");return 0;
@@ -144,6 +151,7 @@ int wmain(int argc,wchar_t** argv) {
         Check(penda::CandidatePanel(layoutRows,1).Digit(1,true) == 45,"shift-digit mapping on next page");
         Check(penda::CandidatePanel({}).Digit(1,true) == -1,"empty second-row slot is not selectable");
         unsigned parityInputs = 0;
+        {penda::Engine legacy;Check(legacy.Load((std::filesystem::path(argv[1])/L"legacy-romaji.pdat").wstring()),"load legacy index without new romaji table");Check(legacy.Hiragana(L"ofa-")==L"おふぁー"&&legacy.Hiragana(L"dhizuni-")==L"でぃずにー","native built-in rules upgrade old dictionary indexes");}
         for (int index = 0; index < 4; ++index) {
             auto stem = std::filesystem::path(argv[1]) / (L"case"+std::to_wstring(index));
             penda::Engine engine; Check(engine.Load(stem.wstring()+L".pdat"),"load compiled snapshot");
@@ -187,7 +195,7 @@ int wmain(int argc,wchar_t** argv) {
                 Hr(keys->OnKeyDown(context.Get(),value,0,&eaten),"key down"); Check(eaten,"TSF edit session accepted"); Pump();
                 Hr(keys->OnKeyUp(context.Get(),value,0,&eaten),"key up"); Check(eaten,"matching key up");
             };
-            auto type = [&](const wchar_t* value) { for (; *value; ++value) key(static_cast<WPARAM>(towupper(*value))); };
+            auto type = [&](const wchar_t* value) { for (; *value; ++value) key(*value==L'-' ? VK_OEM_MINUS : *value==L'\'' ? VK_OEM_7 : static_cast<WPARAM>(towupper(*value))); };
             type(L"n");
             HWND popup = TestPopup(); Check(popup && IsWindowVisible(popup),"candidate popup visible");
             RECT initial{}; GetWindowRect(popup,&initial);
@@ -270,6 +278,10 @@ int wmain(int argc,wchar_t** argv) {
                 Hr(button->OnMenuSelect(11),"persist Japanese priority"); type(L"nihongo"); key(L'1'); Check(store->text.ends_with(L"日本語"),"Japanese priority selects Japanese without Tab");
                 type(L"nihongo");key(VK_RETURN);Check(store->text.ends_with(L"にほんご"),"Japanese priority Enter commits hiragana instead of raw romaji or first kanji");
                 type(L"gakkou");key(VK_RETURN);Check(store->text.ends_with(L"がっこう"),"Japanese priority Enter converts voiced and doubled consonants");
+                type(L"fa");key(VK_RETURN);Check(store->text.ends_with(L"ふぁ"),"native TSF fa commits small-vowel hiragana");
+                type(L"ofa-");key(L'1');Check(store->text.ends_with(L"オファー"),"native TSF ofa dash selects loanword from unchanged user dictionary");
+                type(L"pa-thi-");key(VK_RETURN);Check(store->text.ends_with(L"ぱーてぃー"),"native TSF extended thi and long vowels compose correctly");
+                type(L"dhizuni-");key(L'1');Check(store->text.ends_with(L"ディズニー"),"native TSF dhi reaches katakana dictionary entry");
                 type(L"anofutari");key(VK_SPACE);Check(store->text.ends_with(L"あの二人"),"Japanese whole-phrase lattice converts interior words");
                 type(L"anofutari");key(VK_RETURN);Check(store->text.ends_with(L"あのふたり"),"Japanese phrase Enter still commits pure kana");
                 type(L"ogoruna");key(VK_SPACE);Check(store->text.ends_with(L"奢るな"),"Japanese particle suffix retains dictionary kanji");

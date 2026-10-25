@@ -1,6 +1,7 @@
 #include "Engine.h"
 #include "ChineseDecoder.h"
 #include "JapaneseDecoder.h"
+#include "RomajiTable.generated.h"
 #include <shlobj.h>
 #include <algorithm>
 #include <fstream>
@@ -55,6 +56,9 @@ bool Engine::Load(const std::wstring& path) noexcept {
         auto count = u32(); if (count > 1024) return false;
         for (unsigned i = 0; i < count; ++i) { auto key = text(8), value = text(8); next.romaji.emplace(std::move(key), std::move(value)); }
         if (stream.peek() != std::char_traits<char>::eof()) return false;
+        // Older indexes embed the old map. Fill missing rules without changing
+        // dictionary entries or overwriting mappings supplied by the index.
+        for(const auto& pair:DefaultRomajiTable)next.romaji.try_emplace(pair.key,pair.value);
         *this = std::move(next); return true;
     } catch (...) { return false; }
 }
@@ -70,7 +74,8 @@ std::wstring Engine::Hiragana(std::wstring input) const {
     for (size_t i = 0; i < input.size();) {
         wchar_t c = input[i];
         if (c == L'm' && i+1 < input.size() && (input[i+1] == L'b' || input[i+1] == L'p')) { output += L'ん'; ++i; continue; }
-        if (i + 1 < input.size() && c == input[i + 1] && c != L'n' && std::wstring_view(L"kstpgzdbhfmr").find(c) != std::wstring_view::npos) { output += L'っ'; ++i; continue; }
+        if(c==L't' && i+2<input.size() && input[i+1]==L'c' && input[i+2]==L'h') {output+=L'っ';++i;continue;}
+        if (i + 1 < input.size() && c == input[i + 1] && c != L'n' && std::wstring_view(L"bcdfghjklmpqrstvwxyz").find(c) != std::wstring_view::npos) { output += L'っ'; ++i; continue; }
         if (c == L'n' && (i + 1 == input.size() || (input[i + 1] != L'n' && std::wstring_view(L"aiueoy'").find(input[i + 1]) == std::wstring_view::npos))) { output += L'ん'; ++i; continue; }
         if (c == L'n' && i + 2 < input.size() && input[i + 1] == L'n' && std::wstring_view(L"aiueoy").find(input[i + 2]) != std::wstring_view::npos) { output += L'ん'; ++i; continue; }
         bool found = false;

@@ -66,7 +66,7 @@ void RecordEngineStatus(const Engine& engine,const std::wstring& path) noexcept 
         auto rows=engine.Query(L"ogoru");bool kanji=std::any_of(rows.begin(),rows.end(),[](const Candidate& row){return row.language==1&&row.text==L"奢る";});
         std::wstring physical=path;HANDLE fileHandle=CreateFileW(path.c_str(),GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,0,nullptr);
         if(fileHandle!=INVALID_HANDLE_VALUE){wchar_t name[32768]{};auto count=GetFinalPathNameByHandleW(fileHandle,name,32768,FILE_NAME_NORMALIZED);if(count&&count<32768)physical=name;CloseHandle(fileHandle);}
-        std::wstring report=L"Penda TSF load diagnostic 0.9.7\r\nPID: "+std::to_wstring(GetCurrentProcessId())+L"\r\nDictionary: "+path+L"\r\nPhysical dictionary: "+physical+L"\r\nChinese: "+std::to_wstring(engine.words[0].size())+L"\r\nJapanese: "+std::to_wstring(engine.words[1].size())+L"\r\nEnglish: "+std::to_wstring(engine.words[2].size())+L"\r\nFixed ogoru kanji probe: "+(kanji?L"PASS":L"FAIL")+L"\r\n";
+        std::wstring report=L"Penda TSF load diagnostic 0.9.8\r\nPID: "+std::to_wstring(GetCurrentProcessId())+L"\r\nDictionary: "+path+L"\r\nPhysical dictionary: "+physical+L"\r\nChinese: "+std::to_wstring(engine.words[0].size())+L"\r\nJapanese: "+std::to_wstring(engine.words[1].size())+L"\r\nEnglish: "+std::to_wstring(engine.words[2].size())+L"\r\nFixed ogoru kanji probe: "+(kanji?L"PASS":L"FAIL")+L"\r\n";
         std::ofstream file(folder/(L"engine-"+std::to_wstring(GetCurrentProcessId())+L".txt"),std::ios::binary|std::ios::trunc);const wchar_t bom=0xFEFF;file.write(reinterpret_cast<const char*>(&bom),2);file.write(reinterpret_cast<const char*>(report.data()),report.size()*2);
     } catch(...) {}
 }

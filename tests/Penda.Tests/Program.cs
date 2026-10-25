@@ -53,6 +53,16 @@ Check(engine.Query("nihongo", preferences).Any(c => c.Text == "日本語"), "日
 preferences.Japanese = false; Check(engine.Query("ni", preferences).All(c => c.Language != Language.Japanese), "语言过滤");
 preferences.Japanese = true;
 foreach (var (input, expected) in new[] { ("konnichiwa","こんにちわ"),("konnichiha","こんにちは"),("gakkou","がっこう"),("shinjuku","しんじゅく"),("kanpai","かんぱい"),("kanna","かんな"),("nya","にゃ"),("n'ya","んや"),("nn","ん"),("xtsu","っ"),("ryokou","りょこう") }) Check(Romaji.Hiragana(input) == expected, "罗马字 " + input);
+foreach(var pair in Romaji.TransliterationMap)
+{
+    if(Romaji.Hiragana(pair.Key)!=pair.Value || Romaji.Hiragana(pair.Key.ToUpperInvariant())!=pair.Value)throw new Exception("Invalid romaji mapping: "+pair.Key);
+    var candidates=engine.Query(pair.Key,new(){Chinese=false,English=false});
+    if(!candidates.Any(c=>c.Text==Romaji.Katakana(pair.Value)))throw new Exception("Missing katakana candidate: "+pair.Key);
+}
+Check(true,$"全部 {Romaji.TransliterationMap.Count} 条罗马字规则及大写、片假名候选");
+foreach(var (input,expected) in new[]{("ofa-","おふぁー"),("fairu","ふぁいる"),("firumu","ふぃるむ"),("feri-","ふぇりー"),("fo-ku","ふぉーく"),("fyu-jon","ふゅーじょん"),("shefu","しぇふ"),("jeru","じぇる"),("chekku","ちぇっく"),("pa-thi-","ぱーてぃー"),("dhizuni-","でぃずにー"),("twu-ru","とぅーる"),("matcha","まっちゃ"),("vva","っゔぁ"),("qqa","っくぁ"),("cchi","っち"),("t'i","てぃ"),("d'yu","でゅ")})
+    Check(Romaji.Hiragana(input)==expected,"外来语和扩展拼写 "+input);
+Check(engine.Query("fa",new(){Chinese=false,Japanese=false})[0].Text=="fa","英语组字母不受日语扩展规则影响");
 Check(WidthConverter.Convert("Abc123漢字が", preferences) == "Abc123漢字が", "默认字符宽度");
 Check(WidthConverter.Convert("ｶﾞﾊﾟｳﾞ", preferences) == "ガパヴ", "导入半角假名恢复全角");
 preferences.LatinWidth = WidthMode.Full; preferences.NumberWidth = WidthMode.Full; preferences.KanaWidth = WidthMode.Half;

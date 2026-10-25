@@ -26,5 +26,13 @@ foreach ($scriptName in @('register-tsf.ps1', 'unregister-tsf.ps1')) {
     [IO.File]::WriteAllText((Join-Path $outputPath $scriptName), $scriptText, [Text.UTF8Encoding]::new($true))
 }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination $outputPath
+$packageDocs = Join-Path $outputPath 'docs'
+New-Item -ItemType Directory -Force -Path $packageDocs | Out-Null
+Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\ROMAJI.md') -Destination $packageDocs
+$romajiLicensePath = Join-Path $outputPath 'licenses\romaji'
+New-Item -ItemType Directory -Force -Path $romajiLicensePath | Out-Null
+foreach ($licenseName in @('MOZC-LICENSE.txt','SOURCE.json')) {
+    Copy-Item -LiteralPath (Join-Path $projectRoot ('data\japanese\romaji\'+$licenseName)) -Destination $romajiLicensePath
+}
 Write-Host "已输出到 $outputPath"
 Write-Host '原生 TSF DLL 不依赖 .NET。设置程序的 SelfContained 版自带运行环境；普通版需要 .NET 9 Desktop Runtime。'

@@ -1,0 +1,33 @@
+# 日语扩展罗马字输入
+
+从 0.9.8 起，Penda 的托管预览和原生 TSF 共用 285 条假名规则，覆盖外来语中的小元音、拗音及常用别名。以下片假名通过候选选择输入；回车保持提交平假名。
+
+| 输入 | 片假名候选示例 |
+| --- | --- |
+| `fa fi fe fo` | ファ フィ フェ フォ |
+| `fya fyu fyo` | フャ フュ フョ |
+| `she je che` | シェ ジェ チェ |
+| `thi dhi` | ティ ディ |
+| `thu dhu` | テュ デュ |
+| `twa twi twu twe two` | トァ トィ トゥ トェ トォ |
+| `dwa dwi dwu dwe dwo` | ドァ ドィ ドゥ ドェ ドォ |
+| `tsa tsi tse tso` | ツァ ツィ ツェ ツォ |
+| `kwa kwi kwu kwe kwo` | クァ クィ クゥ クェ クォ |
+| `gwa gwi gwu gwe gwo` | グァ グィ グゥ グェ グォ |
+| `swa swi swu swe swo` | スァ スィ スゥ スェ スォ |
+| `zwa zwi zwu zwe zwo` | ズァ ズィ ズゥ ズェ ズォ |
+| `va vi vu ve vo` | ヴァ ヴィ ヴ ヴェ ヴォ |
+| `vya vyu vyo` | ヴャ ヴュ ヴョ |
+| `wha whi whu whe who` | ウァ ウィ ウ ウェ ウォ |
+
+保留标准区别：`ti` 仍是「ち」，`di` 仍是「ぢ」；外来语「ティ／ディ」用 `thi／dhi`。小假名可用 `x` 或 `l`，例如 `xa/la`、`xya/lya`、`xtsu/ltsu`。长音用减号 `-`。
+
+整词例子：`ofa-` → オファー、`fairu` → ファイル、`firumu` → フィルム、`pa-thi-` → パーティー、`dhizuni-` → ディズニー。`matcha` 与 `maccha` 均可得到「まっちゃ」。原有中文、英文、假名宽度、最近语言置顶和回车提交假名规则不变。
+
+## 维护与旧索引兼容
+
+- 参考表来自 [Mozc 官方 romanji-hiragana.tsv](https://github.com/google/mozc/blob/60af02ff797275f2ba1b7fddccdec916798d112e/src/data/preedit/romanji-hiragana.tsv)，原始文件、固定版本及 SHA-256 保存在 `data/japanese/romaji/`，BSD 许可证随发布包分发。
+- 加载其中的假名映射，保持现有 `n/nn/n'` 行为及标点处理。方向键、符号指令等非假名命令不纳入此次扩展；不是移植整个 Mozc 组合状态机。
+- `scripts/build-tsf.ps1` 从同一份托管规则生成并更新 `src/Penda.Tsf/RomajiTable.generated.h`。直接用 Visual Studio 构建也可使用已提交的生成文件。
+- 原生加载旧 `engine.pdat` 时仅补齐缺失映射，不更改三个语言的词条、用户词频或已有映射。无需重新导入词库。
+- 测试覆盖全部规则的小写、大写、片假名候选、四组宽度及语言设置、空映射旧索引、现有完整词库和真实 TSF 长音按键提交。

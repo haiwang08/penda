@@ -39,7 +39,7 @@ internal sealed class SettingsWindow : Form
             row.Controls.Add(new Label { Text = text, Width = 190, Height = 32, TextAlign = ContentAlignment.MiddleLeft }); row.Controls.Add(control); panel.Controls.Add(row);
         }
         Heading("一种输入，三种表达。", true);
-        Note("PENDA TSF  0.9.7  ·  本地离线词库  ·  Ctrl + Alt + 空格：启用 / 暂停");
+        Note("PENDA TSF  0.9.8  ·  本地离线词库  ·  Ctrl + Alt + 空格：启用 / 暂停");
         Heading("候选语言");
         var languageRow = new FlowLayoutPanel { AutoSize = true };
         var names = new[] { "中文  Ctrl+Alt+1", "日本語  Ctrl+Alt+2", "English  Ctrl+Alt+3" };

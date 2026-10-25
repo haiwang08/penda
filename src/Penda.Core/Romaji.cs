@@ -26,6 +26,19 @@ public static class Romaji
             map[prefix + "ya"] = "ゃ"; map[prefix + "yu"] = "ゅ"; map[prefix + "yo"] = "ょ";
         }
         map["va"] = "ゔぁ"; map["vi"] = "ゔぃ"; map["vu"] = "ゔ"; map["ve"] = "ゔぇ"; map["vo"] = "ゔぉ";
+        using var stream=typeof(Romaji).Assembly.GetManifestResourceStream("Penda.Romaji.Mozc") ?? throw new InvalidDataException("Missing built-in Japanese romaji table.");
+        using var reader=new StreamReader(stream,Encoding.UTF8);
+        while(reader.ReadLine() is { } line)
+        {
+            var fields=line.Split('\t');
+            // Pending-input and symbol commands belong to the input state machine,
+            // not the syllable map. Preserve existing n/nn and punctuation behavior.
+            if(fields.Length<2 || fields.Length>2&&!string.IsNullOrEmpty(fields[2]))continue;
+            string key=fields[0],value=JapaneseDictionaryReader.Reading(fields[1]);
+            if(key.Length is <1 or >4 || key.Any(c=>c is not (>= 'a' and <= 'z') and not '\'' and not '-'))continue;
+            if(value.Length==0 || value.Any(c=>c is not (>= '\u3041' and <= '\u3096') and not '\u30FC'))continue;
+            map.TryAdd(key,value);
+        }
         return map;
     }
     public static string Hiragana(string input)
@@ -36,7 +49,8 @@ public static class Romaji
         {
             var c = input[i];
             if (c == 'm' && i + 1 < input.Length && input[i+1] is 'b' or 'p') { result.Append('ん'); i++; continue; }
-            if (i + 1 < input.Length && c == input[i + 1] && c != 'n' && "kstpgzdbhfmr".Contains(c)) { result.Append('っ'); i++; continue; }
+            if(c=='t' && i+2<input.Length && input[i+1]=='c' && input[i+2]=='h') { result.Append('っ');i++;continue; }
+            if (i + 1 < input.Length && c == input[i + 1] && c != 'n' && "bcdfghjklmpqrstvwxyz".Contains(c)) { result.Append('っ'); i++; continue; }
             if (c == 'n' && (i + 1 == input.Length || (input[i + 1] != 'n' && !"aiueoy'".Contains(input[i + 1])))) { result.Append('ん'); i++; continue; }
             // nna -> んな, while final nn -> ん.
             if (c == 'n' && i + 2 < input.Length && input[i + 1] == 'n' && "aiueoy".Contains(input[i + 2])) { result.Append('ん'); i++; continue; }
