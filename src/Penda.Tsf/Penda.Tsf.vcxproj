@@ -1,0 +1,18 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64"><Configuration>Release</Configuration><Platform>x64</Platform></ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32"><Configuration>Release</Configuration><Platform>Win32</Platform></ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals"><ProjectGuid>{D8784B25-115F-40F8-B0D4-6251C2799DA3}</ProjectGuid><WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration"><ConfigurationType>DynamicLibrary</ConfigurationType><UseDebugLibraries>false</UseDebugLibraries><PlatformToolset>v143</PlatformToolset><CharacterSet>Unicode</CharacterSet></PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup><OutDir>$(MSBuildThisFileDirectory)..\..\artifacts\tsf\$(Platform)\</OutDir><IntDir>$(MSBuildThisFileDirectory)..\..\artifacts\obj\tsf\$(Platform)\</IntDir><TargetName>Penda.Tsf</TargetName></PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile><WarningLevel>Level4</WarningLevel><LanguageStandard>stdcpp20</LanguageStandard><RuntimeLibrary>MultiThreaded</RuntimeLibrary><PreprocessorDefinitions>UNICODE;_UNICODE;WIN32_LEAN_AND_MEAN;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions><AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions><ExceptionHandling>Sync</ExceptionHandling><Optimization>MaxSpeed</Optimization><ControlFlowGuard>Guard</ControlFlowGuard></ClCompile>
+    <Link><ModuleDefinitionFile>Penda.Tsf.def</ModuleDefinitionFile><AdditionalDependencies>ole32.lib;oleaut32.lib;uuid.lib;user32.lib;gdi32.lib;advapi32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies><SubSystem>Windows</SubSystem><EnableUAC>false</EnableUAC></Link>
+  </ItemDefinitionGroup>
+  <ItemGroup><ClCompile Include="Engine.cpp"/><ClCompile Include="TextService.cpp"/><ClCompile Include="Registration.cpp"/></ItemGroup>
+  <ItemGroup><ResourceCompile Include="Penda.rc" /></ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

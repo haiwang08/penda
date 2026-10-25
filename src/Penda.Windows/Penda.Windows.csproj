@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net9.0-windows</TargetFramework><UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Penda.SettingsHost</AssemblyName><Version>0.9.7</Version><ApplicationIcon>../../assets/penda.ico</ApplicationIcon><ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="../Penda.Core/Penda.Core.csproj" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="../../assets/penda.ico" LogicalName="Penda.AppIcon" /></ItemGroup>
+</Project>

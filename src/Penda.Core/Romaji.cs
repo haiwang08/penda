@@ -1,0 +1,51 @@
+using System.Text;
+
+namespace Penda.Core;
+
+public static class Romaji
+{
+    private static readonly Dictionary<string, string> Map = Build();
+    public static IReadOnlyDictionary<string, string> TransliterationMap => Map;
+    private static Dictionary<string, string> Build()
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        void Row(string consonant, string kana)
+        {
+            var vowels = "aiueo";
+            for (int i = 0; i < 5; i++) map[consonant + vowels[i]] = kana[i].ToString();
+        }
+        Row("", "あいうえお"); Row("k", "かきくけこ"); Row("s", "さしすせそ"); Row("t", "たちつてと");
+        Row("n", "なにぬねの"); Row("h", "はひふへほ"); Row("m", "まみむめも"); Row("r", "らりるれろ");
+        Row("g", "がぎぐげご"); Row("z", "ざじずぜぞ"); Row("d", "だぢづでど"); Row("b", "ばびぶべぼ"); Row("p", "ぱぴぷぺぽ");
+        foreach (var (key, value) in new[] { ("ya","や"),("yu","ゆ"),("yo","よ"),("wa","わ"),("wo","を"),("wi","うぃ"),("we","うぇ"),("shi","し"),("chi","ち"),("tsu","つ"),("fu","ふ"),("ji","じ"),("ja","じゃ"),("ju","じゅ"),("jo","じょ"),("sha","しゃ"),("shu","しゅ"),("sho","しょ"),("cha","ちゃ"),("chu","ちゅ"),("cho","ちょ"),("nn","ん"),("n'","ん"),("-","ー") }) map[key] = value;
+        foreach (var (stem, kana) in new[] { ("ky","き"),("gy","ぎ"),("sy","し"),("zy","じ"),("ty","ち"),("dy","ぢ"),("ny","に"),("hy","ひ"),("by","び"),("py","ぴ"),("my","み"),("ry","り") })
+            foreach (var (vowel, small) in new[] { ("a","ゃ"),("u","ゅ"),("o","ょ") }) map[stem + vowel] = kana + small;
+        foreach (var prefix in new[] { "x", "l" })
+        {
+            Row(prefix, "ぁぃぅぇぉ"); map[prefix + "tsu"] = "っ"; map[prefix + "tu"] = "っ";
+            map[prefix + "ya"] = "ゃ"; map[prefix + "yu"] = "ゅ"; map[prefix + "yo"] = "ょ";
+        }
+        map["va"] = "ゔぁ"; map["vi"] = "ゔぃ"; map["vu"] = "ゔ"; map["ve"] = "ゔぇ"; map["vo"] = "ゔぉ";
+        return map;
+    }
+    public static string Hiragana(string input)
+    {
+        input = input.ToLowerInvariant();
+        var result = new StringBuilder();
+        for (int i = 0; i < input.Length;)
+        {
+            var c = input[i];
+            if (c == 'm' && i + 1 < input.Length && input[i+1] is 'b' or 'p') { result.Append('ん'); i++; continue; }
+            if (i + 1 < input.Length && c == input[i + 1] && c != 'n' && "kstpgzdbhfmr".Contains(c)) { result.Append('っ'); i++; continue; }
+            if (c == 'n' && (i + 1 == input.Length || (input[i + 1] != 'n' && !"aiueoy'".Contains(input[i + 1])))) { result.Append('ん'); i++; continue; }
+            // nna -> んな, while final nn -> ん.
+            if (c == 'n' && i + 2 < input.Length && input[i + 1] == 'n' && "aiueoy".Contains(input[i + 2])) { result.Append('ん'); i++; continue; }
+            bool found = false;
+            for (int length = Math.Min(4, input.Length - i); length > 0; length--)
+                if (Map.TryGetValue(input.Substring(i, length), out var kana)) { result.Append(kana); i += length; found = true; break; }
+            if (!found) { result.Append(c); i++; }
+        }
+        return result.ToString();
+    }
+    public static string Katakana(string text) => new(text.Select(c => c is >= '\u3041' and <= '\u3096' ? (char)(c + 0x60) : c).ToArray());
+}

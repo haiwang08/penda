@@ -1,0 +1,18 @@
+**/bin/
+**/obj/
+artifacts/
+.vs/
+*.user
+
+# Downloaded dictionaries and generated indexes; keep source metadata and licenses.
+data/japanese/mozc/dictionary*.txt
+!data/japanese/mozc/DICTIONARY-LICENSE.txt
+data/japanese/ready/*.tsv
+data/japanese/ready/*.pdat
+
+# Local credentials and editor state.
+.env
+.env.*
+!.env.example
+.idea/
+*.suo
