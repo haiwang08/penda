@@ -280,6 +280,22 @@ int wmain(int argc,wchar_t** argv) {
                 {std::ifstream preference{std::filesystem::path(priorityTest)};int selected=-1;preference>>selected;Check(selected==2,"English commit replaces first group");}
                 type(L"x");key(VK_TAB);key(VK_ESCAPE);
                 {std::ifstream preference{std::filesystem::path(priorityTest)};int selected=-1;preference>>selected;Check(selected==2,"Tab and cancel do not change recent language");}
+                auto englishFirst=[&](){Hr(button->OnMenuSelect(10),"start English transition test from Chinese");type(L"hello");key(VK_TAB);key(VK_TAB);key(L'1');};
+                englishFirst();type(L"ka-");Check(IsWindowVisible(TestPopup()),"hyphen after English keeps candidate window open");
+                {std::ifstream preference{std::filesystem::path(priorityTest)};int selected=-1;preference>>selected;Check(selected==2,"provisional hyphen switch does not overwrite last committed language");}
+                key(VK_RETURN);Check(store->text.ends_with(L"かー"),"hyphen after English switches to Japanese kana composition");
+                {std::ifstream preference{std::filesystem::path(priorityTest)};int selected=-1;preference>>selected;Check(selected==1,"confirming long-vowel kana remembers Japanese");}
+                englishFirst();type(L"ka-");key(L'1');Check(store->text.ends_with(L"カー"),"hyphen after English permits Japanese candidate selection");
+                englishFirst();type(L"ka");key(VK_SUBTRACT);key(VK_RETURN);Check(store->text.ends_with(L"かー"),"numeric-keypad minus also retains Japanese composition");
+                Hr(button->OnMenuSelect(10),"start long-vowel input from Chinese");type(L"ka-");key(VK_RETURN);Check(store->text.ends_with(L"かー"),"hyphen after Chinese switches to Japanese composition");
+                englishFirst();auto beforeDash=store->text;type(L"ka-");key(VK_TAB);auto chineseDash=current.Query(L"ka-",1);Check(!chineseDash.empty(),"Chinese hyphen-prefix fixture exists");key(L'1');
+                Check(store->text==beforeDash+chineseDash.front().text+L"-","hyphen reorders groups to Japanese then Chinese then English");key(VK_ESCAPE);Check(store->text==beforeDash,"cancel removes entire provisional long-vowel composition");
+                type(L"hello");key(L'1');Check(store->text.ends_with(L"hello"),"cancel restores previous English-first active group");
+                BOOL standaloneMinus=TRUE;Hr(keys->OnTestKeyDown(context.Get(),VK_OEM_MINUS,0,&standaloneMinus),"standalone minus passthrough probe");Check(!standaloneMinus,"standalone English hyphen keeps previous policy");
+                type(L"hello");key(VK_OEM_PERIOD);Check(store->text.ends_with(L"hello."),"other English punctuation still commits normally");
+                type(L"ka");SetKeyboardState(shifted);key(VK_OEM_MINUS);SetKeyboardState(keyboardState);Check(store->text.ends_with(L"ka_"),"Shift minus underscore is not treated as Japanese long vowel");
+                auto languageToggle=[&](){BYTE saved[256]{};GetKeyboardState(saved);BYTE modified[256];std::copy_n(saved,256,modified);modified[VK_CONTROL]|=0x80;modified[VK_MENU]|=0x80;SetKeyboardState(modified);key(L'2');SetKeyboardState(saved);};
+                languageToggle();type(L"ka-");Check(store->text.ends_with(L"ka-"),"explicitly disabled Japanese keeps old hyphen policy");BOOL afterDisabled=TRUE;keys->OnTestKeyDown(context.Get(),VK_RETURN,0,&afterDisabled);Check(!afterDisabled,"disabled Japanese hyphen ends input as before");languageToggle();
                 BYTE shortcutSaved[256]{};GetKeyboardState(shortcutSaved);BYTE shortcutState[256];std::copy_n(shortcutSaved,256,shortcutState);shortcutState[VK_CONTROL]|=0x80;shortcutState[VK_MENU]|=0x80;SetKeyboardState(shortcutState);BOOL shortcutEaten=TRUE;keys->OnTestKeyDown(context.Get(),L'L',0,&shortcutEaten);SetKeyboardState(shortcutSaved);Check(!shortcutEaten,"removed Ctrl Alt L shortcut passes through");
                 Hr(button->OnMenuSelect(11),"persist Japanese priority"); type(L"nihongo"); key(L'1'); Check(store->text.ends_with(L"日本語"),"Japanese priority selects Japanese without Tab");
                 type(L"nihongo");key(VK_RETURN);Check(store->text.ends_with(L"にほんご"),"Japanese priority Enter commits hiragana instead of raw romaji or first kanji");

@@ -66,7 +66,7 @@ void RecordEngineStatus(const Engine& engine,const std::wstring& path) noexcept 
         auto rows=engine.Query(L"ogoru");bool kanji=std::any_of(rows.begin(),rows.end(),[](const Candidate& row){return row.language==1&&row.text==L"奢る";});
         std::wstring physical=path;HANDLE fileHandle=CreateFileW(path.c_str(),GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,0,nullptr);
         if(fileHandle!=INVALID_HANDLE_VALUE){wchar_t name[32768]{};auto count=GetFinalPathNameByHandleW(fileHandle,name,32768,FILE_NAME_NORMALIZED);if(count&&count<32768)physical=name;CloseHandle(fileHandle);}
-        std::wstring report=L"Penda TSF load diagnostic 0.9.9\r\nPID: "+std::to_wstring(GetCurrentProcessId())+L"\r\nDictionary: "+path+L"\r\nPhysical dictionary: "+physical+L"\r\nChinese: "+std::to_wstring(engine.words[0].size())+L"\r\nJapanese: "+std::to_wstring(engine.words[1].size())+L"\r\nEnglish: "+std::to_wstring(engine.words[2].size())+L"\r\nFixed ogoru kanji probe: "+(kanji?L"PASS":L"FAIL")+L"\r\n";
+        std::wstring report=L"Penda TSF load diagnostic 0.9.10\r\nPID: "+std::to_wstring(GetCurrentProcessId())+L"\r\nDictionary: "+path+L"\r\nPhysical dictionary: "+physical+L"\r\nChinese: "+std::to_wstring(engine.words[0].size())+L"\r\nJapanese: "+std::to_wstring(engine.words[1].size())+L"\r\nEnglish: "+std::to_wstring(engine.words[2].size())+L"\r\nFixed ogoru kanji probe: "+(kanji?L"PASS":L"FAIL")+L"\r\n";
         std::ofstream file(folder/(L"engine-"+std::to_wstring(GetCurrentProcessId())+L".txt"),std::ios::binary|std::ios::trunc);const wchar_t bom=0xFEFF;file.write(reinterpret_cast<const char*>(&bom),2);file.write(reinterpret_cast<const char*>(report.data()),report.size()*2);
     } catch(...) {}
 }
@@ -195,6 +195,7 @@ bool TextService::WantsKey(ITfContext* context, WPARAM key) {
     if (Down(VK_CONTROL) && Down(VK_MENU) && (key == VK_SPACE || (key >= L'1' && key <= L'3'))) return true;
     if (!enabled_ || Down(VK_CONTROL) || Down(VK_MENU) || Down(VK_LWIN) || Down(VK_RWIN)) return false;
     if (key >= L'A' && key <= L'Z') return true;
+    if(!input_.empty() && (languages_&2u) && key==VK_SUBTRACT)return true;
     if (input_.empty()) return (activeLanguage_!=2 && !Punctuation(key,Down(VK_SHIFT)).empty()) || (!Down(VK_SHIFT) && engine_ && engine_->numbers && key >= L'0' && key <= L'9');
     if (key == VK_TAB || key == VK_BACK || key == VK_SPACE || key == VK_RETURN || key == VK_ESCAPE || key == VK_UP || key == VK_DOWN || key == VK_LEFT || key == VK_RIGHT || key == VK_PRIOR || key == VK_NEXT || key == VK_OEM_7) return true;
     return (key >= L'0' && key <= L'9') || !Punctuation(key, Down(VK_SHIFT)).empty();
@@ -232,10 +233,12 @@ HRESULT TextService::Key(ITfContext* context, TfEditCookie cookie, WPARAM key, b
     if (shortcut) { if (key == VK_SPACE) { if (composition_) Finish(cookie, confirmed_+input_); enabled_ = !enabled_; } else { if (composition_) Finish(cookie, confirmed_+input_); languages_ ^= 1u << (key - L'1'); } return S_OK; }
     if (input_.empty()) RefreshEngine();
     if (context_ && context_.Get() != context) return E_UNEXPECTED;
-    if ((key >= L'A' && key <= L'Z') || (key == VK_OEM_7 && !shift && !input_.empty()) || (key == VK_OEM_MINUS && !shift && !input_.empty() && activeLanguage_ == 1)) {
+    const bool japaneseLongMark=!input_.empty() && (languages_&2u) && (key==VK_SUBTRACT || (key==VK_OEM_MINUS&&!shift));
+    if ((key >= L'A' && key <= L'Z') || (key == VK_OEM_7 && !shift && !input_.empty()) || japaneseLongMark) {
         if (input_.size() >= 512) { auto hr=Finish(cookie,confirmed_+input_); if(FAILED(hr)) return hr; }
-        auto previous = input_; input_ += key == VK_OEM_7 ? L'\'' : key == VK_OEM_MINUS ? L'-' : static_cast<wchar_t>(key + (upper ? 0 : 32));
+        auto previous = input_; input_ += key == VK_OEM_7 ? L'\'' : japaneseLongMark ? L'-' : static_cast<wchar_t>(key + (upper ? 0 : 32));
         HRESULT hr = UpdateText(context, cookie); if (FAILED(hr)) { input_ = previous; if (previous.empty() && composition_) { composition_->EndComposition(cookie); Reset(); } return hr; }
+        if(japaneseLongMark){activeLanguage_=1;languageOrder_={1,0,2};}
         RefreshCandidates(); Present(cookie); return S_OK;
     }
     if(input_.empty() && activeLanguage_!=2 && !Punctuation(key,shift).empty()) {
@@ -328,7 +331,7 @@ HRESULT TextService::Accept(TfEditCookie cookie,int index,const std::wstring& su
     auto segments=confirmedSegments_;
     auto hr=Finish(cookie,text+suffix); if(SUCCEEDED(hr) && candidate.language==0) { for(const auto& segment:segments) LearnChinese(segment.first,segment.second); LearnChinese(candidate.key,candidate.text); if(!segments.empty())LearnChinese(learningKey,text); } else if(SUCCEEDED(hr)) LearnWord(candidate.language,candidate.key,candidate.text); return hr;
 }
-void TextService::Reset() { EndUi(); composition_.Reset(); context_.Reset(); input_.clear(); confirmed_.clear(); confirmedKey_.clear(); confirmedSegments_.clear(); candidates_.clear(); selected_ = 0; page_ = 0; layoutRetries_ = 0; if (popup_) { KillTimer(popup_,1); KillTimer(popup_,2); ShowWindow(popup_, SW_HIDE); } }
+void TextService::Reset() { if(priority_>=0&&priority_<3&&languageOrder_[0]!=priority_){languageOrder_[0]=priority_;int n=1;for(int language=0;language<3;++language)if(language!=priority_)languageOrder_[n++]=language;activeLanguage_=priority_;} EndUi(); composition_.Reset(); context_.Reset(); input_.clear(); confirmed_.clear(); confirmedKey_.clear(); confirmedSegments_.clear(); candidates_.clear(); selected_ = 0; page_ = 0; layoutRetries_ = 0; if (popup_) { KillTimer(popup_,1); KillTimer(popup_,2); ShowWindow(popup_, SW_HIDE); } }
 HRESULT TextService::OnCompositionTerminated(TfEditCookie, ITfComposition* composition) { if (composition_.Get() == composition) Reset(); return S_OK; }
 void TextService::EndPending() {
     ++epoch_;

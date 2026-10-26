@@ -1,4 +1,4 @@
-#define MyAppVersion "0.9.9"
+#define MyAppVersion "0.9.10"
 [Setup]
 AppId={{5BBF5BE5-8436-45F7-92D3-26B312589C34}
 AppName=Penda TSF 三语输入

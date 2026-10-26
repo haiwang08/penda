@@ -39,7 +39,7 @@ internal sealed class SettingsWindow : Form
             row.Controls.Add(new Label { Text = text, Width = 190, Height = 32, TextAlign = ContentAlignment.MiddleLeft }); row.Controls.Add(control); panel.Controls.Add(row);
         }
         Heading("一种输入，三种表达。", true);
-        Note("PENDA TSF  0.9.9  ·  本地离线词库  ·  Ctrl + Alt + 空格：启用 / 暂停");
+        Note("PENDA TSF  0.9.10  ·  本地离线词库  ·  Ctrl + Alt + 空格：启用 / 暂停");
         Heading("候选语言");
         var languageRow = new FlowLayoutPanel { AutoSize = true };
         var names = new[] { "中文  Ctrl+Alt+1", "日本語  Ctrl+Alt+2", "English  Ctrl+Alt+3" };
@@ -48,7 +48,7 @@ internal sealed class SettingsWindow : Form
         Note("可同时开启 1–3 种语言；关闭全部语言时，字母仍可通过 Enter 输出原文。\n请在 Windows 输入法列表中选择“Penda 中日英”，无需启动本设置程序。");
         priority.Items.AddRange(["中文优先", "日语优先", "英语优先"]); priorityBaseline = Storage.LoadPriority(service.Preferences.PreferredLanguage); priority.SelectedIndex = (int)priorityBaseline;
         Row("起始候选语言", priority);
-        Note("最近一次确认输入的语言自动排在第一行，并记住选择。Tab 切换选词组；也可从右键菜单调整初始顺序。");
+        Note("最近一次确认输入的语言自动排在第一行，并记住选择。组合输入中按 - 自动切到日语。Tab 切换选词组；也可从右键菜单调整初始顺序。");
         Heading("字符宽度");
         latin.SelectedIndex = (int)service.Preferences.LatinWidth; numbers.SelectedIndex = (int)service.Preferences.NumberWidth; kana.SelectedIndex = (int)service.Preferences.KanaWidth;
         Row("英文字母", latin); Row("数字", numbers); Row("假名", kana);
